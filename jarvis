@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jarvi | Türkçe-İngilizce Sesli Asistan</title>
+  <style>
+    body { background: #161b22; color: #fff; font-family: Arial, sans-serif; margin: 0; padding: 0; }
+    .container { max-width: 600px; margin: 44px auto; padding: 38px 24px; background: #21262d; border-radius: 20px; box-shadow: 0 5px 22px #0a0c10; text-align: center; }
+    #logo { width: 120px; margin: 12px auto 30px auto; border-radius: 14px; border: 2px solid #2eaaff; background:#fff; }
+    #output { background: #232933; border-radius: 12px; min-height: 80px; margin: 24px 0 12px 0; padding: 18px; font-size: 18px; }
+    button { background: #18b9fa; color: #fff; border: none; border-radius: 9px; font-size: 20px; padding: 13px 36px; cursor: pointer; margin: 16px 0 0 0; }
+    input[type=file] { display: none; }
+    #logoBtn { background:#fff; color:#18b9fa; border:2px solid #18b9fa; padding: 10px 18px; margin-bottom:12px; cursor:pointer; border-radius:8px; font-weight:bold; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <input type="file" id="logoInput" accept="image/*" onchange="showLogo(event)">
+    <button id="logoBtn" onclick="document.getElementById('logoInput').click()">Logonu Yükle</button>  
+
+    <img id="logo" src="https://api.iconify.design/simple-icons:openai.svg?color=%232eaaff" alt="Jarvi Logo">
+    <h2>Selam, ben Jarvi 🤖</h2>
+    <div id="output">Mikrofona sorunuzu konuşun.</div>
+    <button onclick="startVoiceRecognition()">🎤 Dinle</button>
+    <div style="margin:25px 0 0 0;font-size:13px;opacity:0.7;">Ana dilim Türkçe. Jarvi'ye istediğin şeyi sorabilirsin.</div>
+  </div>
+
+<script>
+// Logo yükleme
+function showLogo(event) {
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    document.getElementById('logo').src = e.target.result;
+  };
+  if(event.target.files[0]) reader.readAsDataURL(event.target.files[0]);
+}
+
+// Jarvi'nin cevap yapısı
+const jarviInfo = {
+  tr: [
+    {k: /kim.*icat.*etti|kimler yapt[ıi]|tasarladı|kimsin/i, a: "Merhaba, beni icat edenler: Fevzi Efe Esin, Mehmet Burak Gültekin, Yusuf Uras Aslan ve Zeynep Deniz. Bu ekip beni tasarladı ve geliştirdi."},
+    {k: /görev.*paylaşım|ekip.*görev|görev.*nedir|görev(lerin)?/i, a: "Fevzi Efe yazılım ve donanım işleriyle ilgilenir. Mehmet Burak Arduino ve elektronik işleri, Yusuf Uras 3D çizim ve sunumlar, Zeynep Deniz ise çeviri ve çizim alanlarında görevli."},
+    {k: /daha fazla bilgi|detay|ayrıntı/i, a: "Üzgünüm, daha fazla bilgi veremem."},
+    {k: /okul|nerede okuyor|hangi okul/i, a: "Beni oluşturan ekip İTO Yeniköy Mehmetçik okulunda okuyor."},
+    {k: /öğretmen|yardım eden(ler)?|hangi öğretmen/i, a: "Tüm öğretmenlerimize teşekkür ederiz. Özellikle Serdal Hoca, Yıldız Hoca, Suha Hoca, Levent Hoca, Oğuz Hoca ve müdür bey bize yardımcı olmuştur."}
+  ],
+  en: [
+    {k: /who created|who invented|who designed|who are you/i, a: "Hello, my creators are Fevzi Efe Esin, Mehmet Burak Gültekin, Yusuf Uras Aslan and Zeynep Deniz. They designed and developed me."},
+    {k: /team tasks|team roles|duties/i, a: "Fevzi Efe focuses on software and hardware. Mehmet Burak on Arduino and electronics, Yusuf Uras on 3D drawing and presentations, and Zeynep Deniz on translation and drawing tasks."},
+    {k: /more info|details|further information/i, a: "Sorry, I can't provide more information."},
+    {k: /school|which school|where do you study/i, a: "My creators study at ITO Yenikoy Mehmetcik School."},
+    {k: /teacher|helping teachers|which teachers/i, a: "We thank all our teachers, especially Mr. Serdal, Mrs. Yildiz, Mr. Suha, Mr. Levent, Mr. Oguz, and our principal, for their help."}
+  ]
+};
+
+function jarviAnswer(text) {
+  const isEn = /[A-Za-z]/.test(text) && !/[ÇŞĞÜÖİçşğüöı]/.test(text);
+  const qaList = isEn ? jarviInfo.en : jarviInfo.tr;
+  for (const qa of qaList) {
+    if(qa.k.test(text)) return qa.a;
+  }
+  return isEn ? "Sorry, I cannot answer that." : "Bu konuda yardımcı olamıyorum.";
+}
+
+function jarviSpeak(text, lang='tr-TR') {
+  const synth = window.speechSynthesis;
+  let voices = synth.getVoices();
+  let voice = voices.find(v => v.lang === lang && v.name.toLowerCase().includes('erkek'));
+  if(!voice) voice = voices.find(v => v.lang === lang);
+  if(!voice) voice = voices[0];
+  const utter = new SpeechSynthesisUtterance(text);
+  utter.voice = voice;
+  utter.lang = lang;
+  utter.rate = 1;
+  utter.pitch = 1;
+  synth.speak(utter);
+}
+
+function startVoiceRecognition() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const recognition = new SpeechRecognition();
+  recognition.lang = 'tr-TR';
+  recognition.start();
+  document.getElementById('output').textContent = '🎙️ Dinleniyor...';
+
+  recognition.onresult = function(event) {
+    const text = event.results[0][0].transcript;
+    document.getElementById('output').innerHTML = '<b>Siz:</b> ' + text;
+    const answer = jarviAnswer(text);
+    setTimeout(()=>{
+      document.getElementById('output').innerHTML += `  
+<b>Jarvi:</b> ${answer}`;
+      jarviSpeak(answer, /[A-Za-z]/.test(text)?'en-US':'tr-TR');
+    }, 900);
+  };
+  recognition.onerror = function(event) {
+    document.getElementById('output').textContent = 'Bir hata oluştu: ' + event.error;
+  };
+}
+</script>
+</body>
+</html>
